@@ -1,4 +1,4 @@
-# android_app
+# singleplayer_bets
 
 A new Flutter project.
 
