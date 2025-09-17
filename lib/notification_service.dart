@@ -30,7 +30,7 @@ class NotificationService {
 
     // Use a unique integer for notification ID
     final int notificationId = bet.id!;
-    final tz.TZDateTime scheduledDate = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5));
+    final tz.TZDateTime scheduledDate = tz.TZDateTime.from(bet.resolveDate, tz.local);
 
     // Schedule initial notification
     if (scheduledDate.isAfter(DateTime.now())) {
