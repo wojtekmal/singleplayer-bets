@@ -1,122 +1,202 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'bet_model.dart';
+import 'database_helper.dart';
+import 'notification_service.dart';
+import 'screens/add_edit_bet_screen.dart';
+import 'screens/bet_detail_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
+  await DatabaseHelper().database; // Ensure DB is initialized
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Singleplayer Bets',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const HomeScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _HomeScreenState extends State<HomeScreen> {
+  late Future<List<Bet>> _betsFuture;
+  late Future<double?> _scoreFuture;
 
-  void _incrementCounter() {
+  @override
+  void initState() {
+    super.initState();
+    _requestNotificationPermission();
+    _refreshData();
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    final status = await Permission.notification.request();
+    if (status.isDenied) {
+      // You can show a dialog to the user explaining why the permission is needed.
+      print("Notification permission was denied.");
+    }
+  }
+
+  void _refreshData() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _betsFuture = DatabaseHelper().getBets();
+      _scoreFuture = DatabaseHelper().calculateAverageLogLoss();
     });
+  }
+
+  void _navigateAndRefresh(Widget screen) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (ctx) => screen),
+    ).then((_) => _refreshData());
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: 150.0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                color: Theme.of(context).primaryColor,
+                child: Center(
+                  child: _buildScoreCard(),
+                ),
+              ),
             ),
-          ],
-        ),
+          ),
+          _buildBetList(),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
+        onPressed: () => _navigateAndRefresh(AddEditBetScreen(onSave: _refreshData)),
+        tooltip: 'New Bet',
         child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
+    );
+  }
+
+  Widget _buildScoreCard() {
+    return FutureBuilder<double?>(
+      future: _scoreFuture,
+      builder: (context, snapshot) {
+        Widget content;
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          content = const CircularProgressIndicator(color: Colors.white);
+        } else if (snapshot.hasError) {
+          content = const Text('Error', style: TextStyle(color: Colors.white));
+        } else if (snapshot.hasData && snapshot.data != null) {
+          final score = -snapshot.data!;
+          content = Text(
+            (-score).toStringAsFixed(2),
+            style: const TextStyle(fontSize: 48, color: Colors.white, fontWeight: FontWeight.bold),
+          );
+        } else {
+          content = const Text(
+            'No bets resolved yet',
+            style: TextStyle(color: Colors.white, fontSize: 18),
+          );
+        }
+        return Card(
+          color: Theme.of(context).primaryColorDark,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('AVG LOG LOSS', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 8),
+                content,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBetList() {
+    return FutureBuilder<List<Bet>>(
+      future: _betsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
+        } else if (snapshot.hasError) {
+          return const SliverFillRemaining(child: Center(child: Text('Error loading bets.')));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SliverFillRemaining(child: Center(child: Text('No bets yet. Add one!')));
+        } else {
+          final bets = snapshot.data!;
+          return SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final bet = bets[index];
+                return BetListItem(
+                  bet: bet,
+                  onTap: () => _navigateAndRefresh(
+                    BetDetailScreen(bet: bet, onUpdate: _refreshData),
+                  ),
+                );
+              },
+              childCount: bets.length,
+            ),
+          );
+        }
+      },
+    );
+  }
+}
+
+class BetListItem extends StatelessWidget {
+  final Bet bet;
+  final VoidCallback onTap;
+
+  const BetListItem({Key? key, required this.bet, required this.onTap}) : super(key: key);
+
+  Color _getBetColor() {
+    if (bet.resolvedStatus == 1) return Colors.green;
+    if (bet.resolvedStatus == 0) return Colors.red;
+    return Colors.yellow;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      color: _getBetColor(),
+      child: ListTile(
+        onTap: onTap,
+        title: Text(bet.content, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('Resolves: ${DateFormat.yMMMd().format(bet.resolveDate)}'),
+        trailing: Text(
+          '${(bet.probability * 100).toStringAsFixed(0)}%',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+      ),
     );
   }
 }
