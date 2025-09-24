@@ -57,6 +57,10 @@ class NotificationService {
     // Use a different ID to not overwrite the initial one
     final int weeklyNotificationId = notificationId + 100000;
     final tz.TZDateTime weeklyStartDate = scheduledDate.add(const Duration(days: 7));
+    print("scheduled date:");
+    print(scheduledDate);
+    print("weekly start date:");
+    print(weeklyStartDate);
     
     await flutterLocalNotificationsPlugin.zonedSchedule(
       weeklyNotificationId,
@@ -68,11 +72,12 @@ class NotificationService {
           'bet_reminder_channel',
           'Bet Reminders',
           channelDescription: 'Weekly reminders for unresolved bets',
+          importance: Importance.max,
+          priority: Priority.high,
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
     );
   }
 
