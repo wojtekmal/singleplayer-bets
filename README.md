@@ -9,8 +9,9 @@ Download build/app/outputs/flutter-apk/app-release.apk on your Android phone and
 ## Screenshots
 
 I created this app solely for personal use and I don't expect anyone to actually install it, so here are some screenshots.
-![](screenshots/1.png)
-![](screenshots/2.png)
-![](screenshots/4.png)
-![](screenshots/5.png)
-![](screenshots/6.png)
+
+<img src="screenshots/1.png" width="200"/>
+<img src="screenshots/2.png" width="200"/>
+<img src="screenshots/4.png" width="200"/>
+<img src="screenshots/5.png" width="200"/>
+<img src="screenshots/6.png" width="200"/>
