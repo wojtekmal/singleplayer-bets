@@ -1,16 +1,16 @@
-# singleplayer_bets
+# Singleplayer Bets
 
-A new Flutter project.
+An app for placing bets on your future.
 
-## Getting Started
+## Installation
 
-This project is a starting point for a Flutter application.
+Download build/app/outputs/flutter-apk/app-release.apk on your Android phone and click it in the file explorer to install it. Accept notifications.
 
-A few resources to get you started if this is your first Flutter project:
+## Screenshots
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+I created this app solely for personal use and I don't expect anyone to actually install it, so here are some screenshots.
+![](screenshots/1.png)
+![](screenshots/2.png)
+![](screenshots/4.png)
+![](screenshots/5.png)
+![](screenshots/6.png)
